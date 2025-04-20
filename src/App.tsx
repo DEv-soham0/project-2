@@ -2,11 +2,13 @@
 /// <reference types="@tensorflow/tfjs" />
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Search, Shield, ShieldAlert, Sparkles, Loader2 } from 'lucide-react';
+import { AlertTriangle, Search, Shield, ShieldAlert, Sparkles, Loader2, Youtube } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as tf from '@tensorflow/tfjs';
 // Import custom model
 import { loadAndPredict } from './model/model.js';
+import { extractVideoId } from './services/youtube';
+import YouTubeComments from './components/YouTubeComments';
 
 declare global {
   interface Window {
@@ -31,11 +33,14 @@ interface SearchEntry {
 
 const App: React.FC = () => {
   const [inputText, setInputText] = useState<string>('');
+  const [youtubeUrl, setYoutubeUrl] = useState<string>('');
   const [searchHistory, setSearchHistory] = useState<SearchEntry[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [model, setModel] = useState<boolean>(false);
   const [modelLoading, setModelLoading] = useState<boolean>(true);
   const [modelError, setModelError] = useState<string | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [youtubeError, setYoutubeError] = useState<string | null>(null);
   
   // Load TensorFlow model on component mount
   useEffect(() => {
@@ -144,6 +149,31 @@ const App: React.FC = () => {
       }
     }
   };
+
+  const handleYoutubeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setYoutubeError(null);
+    
+    if (youtubeUrl.trim()) {
+      const extractedVideoId = extractVideoId(youtubeUrl);
+      
+      if (extractedVideoId) {
+        setVideoId(extractedVideoId);
+        setYoutubeUrl('');
+      } else {
+        setYoutubeError('Invalid YouTube URL. Please enter a valid YouTube video URL.');
+      }
+    }
+  };
+  
+  const handleBackFromYoutube = () => {
+    setVideoId(null);
+  };
+  
+  // If we have a videoId, show the YouTube comments analysis component
+  if (videoId) {
+    return <YouTubeComments videoId={videoId} onBack={handleBackFromYoutube} />;
+  }
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 p-4 md:p-6 overflow-hidden">
@@ -205,7 +235,7 @@ const App: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <form onSubmit={handleSubmit} className="mb-12 relative">
+          <form onSubmit={handleSubmit} className="mb-6 relative">
             <div className="flex gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-xl shadow-lg border border-gray-100">
               <input
                 type="text"
@@ -246,6 +276,38 @@ const App: React.FC = () => {
             >
               <Shield size={60} />
             </motion.div>
+          </form>
+
+          {/* YouTube URL form */}
+          <form onSubmit={handleYoutubeSubmit} className="mb-12 relative">
+            <div className="flex gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-xl shadow-lg border border-gray-100">
+              <input
+                type="text"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="Enter YouTube URL to analyze comments..."
+                className="flex-grow p-3 bg-transparent border-b-2 border-red-100 focus:border-red-500 focus:outline-none transition-colors placeholder-gray-400"
+              />
+              <motion.button 
+                type="submit"
+                disabled={!youtubeUrl.trim()}
+                className={`p-3 rounded-lg ${!youtubeUrl.trim() ? 'bg-gray-100 text-gray-400' : 'bg-red-600 text-white hover:bg-red-700'} transition-colors flex items-center justify-center min-w-16`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Youtube size={20} />
+              </motion.button>
+            </div>
+            
+            {youtubeError && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-2 text-sm text-red-500"
+              >
+                {youtubeError}
+              </motion.div>
+            )}
           </form>
         </motion.div>
         
