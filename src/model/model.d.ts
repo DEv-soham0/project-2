@@ -1,3 +1,2 @@
-declare module './model.js' {
-  export function loadAndPredict(text: string): Promise<number>;
-} 
+// Type definitions for the model
+export function loadAndPredict(text: string): Promise<number>; 
